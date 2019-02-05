@@ -104,20 +104,212 @@ parcelRequire = (function (modules, cache, entry, globalName) {
 
   // Override the current require with this new one
   return newRequire;
-})({"index.ts":[function(require,module,exports) {
+})({"MyObject.ts":[function(require,module,exports) {
 "use strict";
 
-var c = document.getElementById("webgl");
-var width = c.width;
-var height = c.height;
-var gl = c.getContext("webgl");
-gl.viewport(0, 0, width, height);
-gl.enable(gl.DEPTH_TEST);
-gl.enable(gl.CULL_FACE);
-gl.cullFace(gl.BACK);
-gl.clearColor(0.0, 0.0, 0.0, 1.0);
-gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-},{}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function getBuffers(gl, obj) {
+  var _vbo = gl.createBuffer();
+
+  var _ibo = gl.createBuffer();
+
+  if (!_vbo || !_ibo) {
+    return null;
+  }
+
+  var buff = {
+    vbo: _vbo,
+    ibo: _ibo
+  };
+  gl.bindBuffer(gl.ARRAY_BUFFER, buff.vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(obj.vertices.flat()), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buff.ibo);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(obj.indices.flat()), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+  return buff;
+}
+
+exports.getBuffers = getBuffers;
+},{}],"hexagon.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function getHexagon(length) {
+  return {
+    vertices: getVertices(length),
+    indices: getIndicese(length)
+  };
+}
+
+exports.getHexagon = getHexagon;
+
+function getVertices(length) {
+  var th = 1.0 / length;
+  var tw2 = th / Math.sqrt(3);
+  var tw = tw2 * 2;
+  var arr = [];
+
+  for (var i = -length; i <= length; i++) {
+    var absi = Math.abs(i);
+    var y = th * i;
+    var x = tw2 * absi - 2.0 / Math.sqrt(3);
+    var n = length * 2 + 1 - absi;
+
+    for (var j = 0; j < n; j++) {
+      arr.push([x, y]);
+      x += tw;
+    }
+  }
+
+  return arr;
+}
+
+function triangles(top, bottom, n) {
+  var t = top;
+  var b = bottom;
+  var arr = [];
+
+  for (var i = 0; i < n; i++) {
+    arr.push([t, b, b + 1]);
+    t++;
+    b++;
+  }
+
+  return arr;
+}
+
+function getIndicese(length) {
+  var index = 0;
+  var num_triangles = length;
+  var arr = [];
+
+  for (var i = 0; i < length; i++) {
+    var next_index = index + length + i + 1;
+    arr = arr.concat(triangles(next_index + 1, index, num_triangles++));
+    arr = arr.concat(triangles(index, next_index, num_triangles));
+    index = next_index;
+  }
+
+  for (var i = 0; i < length; i++) {
+    var next_index = index + 2 * length - i + 1;
+    arr = arr.concat(triangles(next_index, index, num_triangles--));
+    arr = arr.concat(triangles(index + 1, next_index, num_triangles));
+    index = next_index;
+  }
+
+  return arr;
+}
+},{}],"index.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var MyObject_1 = require("./MyObject");
+
+var hexagon_1 = require("./hexagon");
+
+var gl;
+
+window.onload = function () {
+  var c = document.getElementById("webgl");
+  var width = c.width;
+  var height = c.height;
+
+  var _gl = c.getContext("webgl");
+
+  if (!_gl) {
+    alert("ERROR: WebGL API is not available");
+    return;
+  }
+
+  gl = _gl;
+  glInit(width, height);
+  var vs = "\n    attribute vec2 xy; \n    varying float r;\n    void main(void) { \n        gl_Position = vec4(xy, 0.0, 1.0);\n        r = sqrt(max(1.0 - dot(xy, xy), 0.0));\n    }";
+  var fs = "precision mediump float;\n    varying float r;\n    void main(void) { \n        gl_FragColor = vec4(vec3(1.0, 1.0, 1.0) * r, 1.0); \n    }";
+
+  var _program = create_program(vs, fs);
+
+  if (!_program) {
+    console.log("ERROR: failed to create a program.");
+    return;
+  }
+
+  var program = _program;
+  var location = gl.getAttribLocation(program, "xy");
+  gl.enableVertexAttribArray(location);
+  var hexagon = hexagon_1.getHexagon(16);
+
+  var _buff = MyObject_1.getBuffers(gl, hexagon);
+
+  if (!_buff) {
+    console.log("ERROR: failed to create a buffer.");
+    return;
+  }
+
+  var buff = _buff;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buff.vbo);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buff.ibo);
+  gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+  gl.drawElements(gl.TRIANGLES, hexagon.indices.flat().length, gl.UNSIGNED_SHORT, 0);
+  gl.flush();
+  console.log("DONE.");
+};
+
+function glInit(width, height) {
+  gl.viewport(0, 0, width, height);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
+
+function create_program(vs, fs) {
+  var _program = gl.createProgram();
+
+  if (!_program) {
+    return null;
+  }
+
+  var program = _program;
+  gl.attachShader(program, create_shader(vs, gl.VERTEX_SHADER));
+  gl.attachShader(program, create_shader(fs, gl.FRAGMENT_SHADER));
+  gl.linkProgram(program);
+
+  if (gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    gl.useProgram(program);
+    return program;
+  } else {
+    alert(gl.getProgramInfoLog(program));
+    return null;
+  }
+}
+
+function create_shader(code, shader_type) {
+  var _shader = gl.createShader(shader_type);
+
+  if (!_shader) {
+    return null;
+  }
+
+  var shader = _shader;
+  gl.shaderSource(shader, code);
+  gl.compileShader(shader);
+
+  if (gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    return shader;
+  } else {
+    alert(gl.getShaderInfoLog(shader));
+    return null;
+  }
+}
+},{"./MyObject":"MyObject.ts","./hexagon":"hexagon.ts"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -144,7 +336,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "38357" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "35143" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
