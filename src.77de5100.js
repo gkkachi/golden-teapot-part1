@@ -233,8 +233,8 @@ window.onload = function () {
 
   gl = _gl;
   glInit(width, height);
-  var vs = "\n    attribute vec2 xy; \n    varying float r;\n    void main(void) { \n        gl_Position = vec4(xy, 0.0, 1.0);\n        r = sqrt(max(1.0 - dot(xy, xy), 0.0));\n    }";
-  var fs = "precision mediump float;\n    varying float r;\n    void main(void) { \n        gl_FragColor = vec4(vec3(1.0, 1.0, 1.0) * r, 1.0); \n    }";
+  var vs = "\n    attribute vec2 xy;\n    varying float r;\n    void main(void) {\n        gl_Position = vec4(xy, 0.0, 1.0);\n        r = sqrt(max(1.0 - dot(xy, xy), 0.0));\n    }";
+  var fs = "precision mediump float;\n    varying float r;\n    void main(void) {\n        gl_FragColor = vec4(vec3(1.0, 1.0, 1.0) * r, 1.0);\n    }";
 
   var _program = create_program(vs, fs);
 
@@ -259,7 +259,16 @@ window.onload = function () {
   gl.bindBuffer(gl.ARRAY_BUFFER, buff.vbo);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buff.ibo);
   gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
-  gl.drawElements(gl.TRIANGLES, hexagon.indices.flat().length, gl.UNSIGNED_SHORT, 0);
+  /*
+  gl.drawElements(
+    gl.TRIANGLES,
+    hexagon.indices.flat().length,
+    gl.UNSIGNED_SHORT,
+    0
+  );
+  */
+
+  gl.drawArrays(gl.POINTS, 0, hexagon.vertices.length);
   gl.flush();
   console.log("DONE.");
 };
@@ -336,7 +345,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "35143" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "41561" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
