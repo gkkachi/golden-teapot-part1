@@ -120,20 +120,29 @@ function getBuffers(gl, obj) {
     return null;
   }
 
+  var flatten_vertices = flatten(obj.vertices);
+  var flatten_indices = flatten(obj.indices);
   var buff = {
     vbo: _vbo,
-    ibo: _ibo
+    ibo: _ibo,
+    count: flatten_indices.length
   };
   gl.bindBuffer(gl.ARRAY_BUFFER, buff.vbo);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(obj.vertices.flat()), gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(flatten_vertices), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buff.ibo);
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(obj.indices.flat()), gl.STATIC_DRAW);
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(flatten_indices), gl.STATIC_DRAW);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
   return buff;
 }
 
 exports.getBuffers = getBuffers;
+
+function flatten(arr) {
+  return arr.reduce(function (acc, x) {
+    return acc.concat(x);
+  });
+}
 },{}],"hexagon.ts":[function(require,module,exports) {
 "use strict";
 
@@ -259,16 +268,7 @@ window.onload = function () {
   gl.bindBuffer(gl.ARRAY_BUFFER, buff.vbo);
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buff.ibo);
   gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
-  /*
-  gl.drawElements(
-    gl.TRIANGLES,
-    hexagon.indices.flat().length,
-    gl.UNSIGNED_SHORT,
-    0
-  );
-  */
-
-  gl.drawArrays(gl.POINTS, 0, hexagon.vertices.length);
+  gl.drawElements(gl.TRIANGLES, buff.count, gl.UNSIGNED_SHORT, 0);
   gl.flush();
   console.log("DONE.");
 };
@@ -345,7 +345,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "41561" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "34047" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
